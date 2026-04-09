@@ -1,66 +1,52 @@
 from django.db import models
-from django.contrib.auth.models import User # Para el Login
+from django.contrib.auth.models import User
+import uuid
+import datetime
 
-def generar_folio():
-    ultimo_tramite = Tramite.objects.all().order_by('id').last()
-    if not ultimo_tramite:
-        return 'SVX-2026-001'
-    nuevo_id = ultimo_tramite.id + 1
-    return f'SVX-2026-{nuevo_id:03d}'
 
 class Tramite(models.Model):
-    ESTADOS_TRAMITE = [
-        ('borrador', 'En Registro'), # Cuando el usuario aún no termina de subir todo
-        ('revision', 'Esperando Revisión Admin'),
-        ('accion_requerida', 'Documentos Rechazados'),
-        ('aprobado', 'Finalizado / Permiso Liberado'),
+    ESTADOS = [
+        ('PENDIENTE', 'En Revisión'),
+        ('RECHAZADO', 'Acción Requerida'),
+        ('APROBADO', 'Aprobado'),
+        ('FINALIZADO', 'Permiso Generado'),
     ]
 
-    # Vinculamos el trámite al ciudadano logueado
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mis_tramites')
+    # Información del finado y declarante
+    folio = models.CharField(max_length=20, unique=True, editable=False) 
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tramites')
+    nombre_finado = models.CharField(max_length=255)
+    fecha_nacimiento = models.DateField()
+    nombre_declarante = models.CharField(max_length=255)
+    parentesco = models.CharField(max_length=100)
+    email_declarante = models.EmailField(max_length=255, blank=True, null=True)
+    telefono_declarante = models.CharField(max_length=20, blank=True, null=True)
     
-    folio = models.CharField(max_length=20, unique=True, default=generar_folio, editable=False)
-    nombre_fallecido = models.CharField(max_length=200)
-    nombre_declarante = models.CharField(max_length=200)
-    
-    fecha_solicitud = models.DateTimeField(auto_now_add=True)
-    estatus = models.CharField(max_length=20, choices=ESTADOS_TRAMITE, default='borrador')
-    
-    url_permiso_final = models.URLField(max_length=500, null=True, blank=True)
+    # Estado general del trámite
+    status = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
+    creado_el = models.DateTimeField(auto_now_add=True)
+    actualizado_el = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return f"{self.folio} - {self.nombre_fallecido}"
+    def save(self, *args, **kwargs):
+        if not self.folio:
+            anio = datetime.date.today().year
+            ultimo = Tramite.objects.filter(creado_el__year=anio).last()
+            if ultimo:
+                # Lógica para sumar 1
+                num = int(ultimo.folio.split('-')[-1]) + 1
+                self.folio = f"SVX-{anio}-{num:03d}"
+            else:
+                self.folio = f"SVX-{anio}-001"
+        super().save(*args, **kwargs)
 
 class Documento(models.Model):
-    ESTADOS_DOC = [
-        ('pendiente', 'Pendiente de Revisión'),
-        ('aprobado', 'Aprobado ✅'),
-        ('rechazado', 'Rechazado ❌'),
-    ]
-
-    REQUISITOS = [
-        ('INE_Fallecido', 'INE Fallecido'),
-        ('Certificado_Defuncion', 'Certificado de Defunción'),
-        ('Acta_Defuncion', 'Acta de Defunción'),
-        ('Orden_Inhumacion', 'Orden de Inhumación'),
-        ('INE_Declarante', 'INE del Declarante'),
-        ('Recibo_Pirotecnia', 'Recibo de Pirotecnia'),
-        ('Recibo_Semana_Santa', 'Recibo de Semana Santa'),
-        ('Recibo_Fiestas_Patrias', 'Recibo de Fiestas Patrias'),
-        ('Recibo_Agua', 'Recibo de Agua Potable'),
-        ('Recibo_Cooperaciones', 'Recibo de Cooperaciones'),
-    ]
-
-    tramite = models.ForeignKey(Tramite, on_delete=models.CASCADE, related_name='documentos')
-    tipo_documento = models.CharField(max_length=50, choices=REQUISITOS)
-    ruta_supabase = models.URLField(max_length=500) 
+    ESTADOS_DOC = [('PENDIENTE', 'Pendiente'), ('APROBADO', 'Aprobado'), ('RECHAZADO', 'Rechazado')]
     
-    # CAMBIO IMPORTANTE: Estado detallado en lugar de Boolean
-    estado = models.CharField(max_length=20, choices=ESTADOS_DOC, default='pendiente')
-    
-    observaciones = models.TextField(null=True, blank=True)
-    fecha_revision = models.DateTimeField(null=True, blank=True)
-    revisado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='revisiones_hechas')
+    tramite = models.ForeignKey(Tramite, related_name='documentos', on_delete=models.CASCADE)
+    tipo_documento = models.CharField(max_length=100) # Ej: "INE Fallecido"
+    archivo_url = models.URLField() # URL de Supabase Storage
+    estado = models.CharField(max_length=20, choices=ESTADOS_DOC, default='PENDIENTE')
+    motivo_rechazo = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.tipo_documento} - {self.estado}"
+        return f"{self.tipo_documento} - {self.tramite.folio}"
