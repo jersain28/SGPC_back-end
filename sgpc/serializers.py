@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Tramite, Documento 
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,22 +20,23 @@ class DocumentoSerializer(serializers.ModelSerializer):
         fields = ['tipo_documento', 'archivo_url']
 
 class TramiteSerializer(serializers.ModelSerializer):
-    documentos = DocumentoSerializer(many=True, required=False)
+    # Esto leerá los documentos relacionados y los devolverá como una lista
+    documentos = DocumentoSerializer(many=True, read_only=True)
+    
+    # Mapeos para que React reciba lo que espera (opcional si los nombres ya coinciden)
+    # finado = serializers.CharField(source='nombre_finado', read_only=True)
 
     class Meta:
         model = Tramite
         fields = '__all__'
-        read_only_fields = ['folio', 'usuario', 'status'] #
+        read_only_fields = ['folio', 'usuario', 'status']
 
     def create(self, validated_data):
-        documentos_data = validated_data.pop('documentos', [])
-        
-        # El usuario se recupera del perform_create del viewset
+        # Tu lógica de creación se mantiene aquí si es necesaria
+        documentos_data = self.context['request'].data.get('documentos', [])
         tramite = Tramite.objects.create(**validated_data)
         
         for doc in documentos_data:
-            # Solo creamos el registro si tiene una URL válida
-            if doc.get('archivo_url'):
-                Documento.objects.create(tramite=tramite, **doc) #
+            Documento.objects.create(tramite=tramite, **doc)
             
         return tramite
