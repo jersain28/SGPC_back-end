@@ -20,23 +20,15 @@ class DocumentoSerializer(serializers.ModelSerializer):
         fields = ['tipo_documento', 'archivo_url']
 
 class TramiteSerializer(serializers.ModelSerializer):
-    # Esto leerá los documentos relacionados y los devolverá como una lista
-    documentos = DocumentoSerializer(many=True, read_only=True)
-    
-    # Mapeos para que React reciba lo que espera (opcional si los nombres ya coinciden)
-    # finado = serializers.CharField(source='nombre_finado', read_only=True)
-
     class Meta:
         model = Tramite
         fields = '__all__'
-        read_only_fields = ['folio', 'usuario', 'status']
+        # Mantenemos estos como solo lectura para que el usuario no los altere manualmente
+        read_only_fields = ['folio', 'usuario', 'creado_el', 'actualizado_el']
 
     def create(self, validated_data):
-        # Tu lógica de creación se mantiene aquí si es necesaria
-        documentos_data = self.context['request'].data.get('documentos', [])
-        tramite = Tramite.objects.create(**validated_data)
-        
-        for doc in documentos_data:
-            Documento.objects.create(tramite=tramite, **doc)
-            
-        return tramite
+        # Asignamos automáticamente el usuario que hace la petición
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['usuario'] = request.user
+        return super().create(validated_data)

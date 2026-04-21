@@ -14,6 +14,8 @@ from datetime import timedelta
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import environ
+import os
 
 load_dotenv()
 
@@ -159,7 +161,6 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
-
 
 
 # Static files (CSS, JavaScript, Images)

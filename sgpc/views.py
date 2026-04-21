@@ -1,8 +1,9 @@
 from rest_framework import viewsets, permissions
+import supabase
 from .models import Tramite
 from .serializers import TramiteSerializer
 from django.contrib.auth.models import User
-from rest_framework import generics, permissions, status
+from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -13,7 +14,9 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from openpyxl import Workbook
 from django.http import HttpResponse
 from django.utils.timezone import localtime
-from django.http import JsonResponse
+from django.http import JsonResponse    
+from supabase import create_client, Client
+from django.conf import settings
 
 
 class TramiteViewSet(viewsets.ModelViewSet):
@@ -88,15 +91,27 @@ def lista_tramites_admin(request):
     serializer = TramiteSerializer(tramites, many=True)
     return Response(serializer.data)
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def detalle_tramite_admin(request, pk):
     try:
         tramite = Tramite.objects.get(pk=pk)
-        serializer = TramiteSerializer(tramite)
-        return Response(serializer.data)
     except Tramite.DoesNotExist:
         return Response({"error": "No existe"}, status=404)
+
+    # LÓGICA PARA ACTUALIZAR (El botón verde de React usa esto)
+    if request.method == 'PATCH':
+        # partial=True permite actualizar solo los campos enviados (ej. status_ine_fallecido)
+        serializer = TramiteSerializer(tramite, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            # Devolvemos el trámite actualizado para que React refresque la interfaz
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # LÓGICA PARA LEER (Carga inicial)
+    serializer = TramiteSerializer(tramite)
+    return Response(serializer.data)
     
 def exportar_tramites_excel(request):
     try:
@@ -143,3 +158,89 @@ def exportar_tramites_excel(request):
     except Exception as e:
         print(f"ERROR CRÍTICO EXCEL: {str(e)}")
         return JsonResponse({'details': str(e)}, status=500)
+    
+
+@api_view(['PATCH'])
+def validar_documento(request, pk):
+    try:
+        tramite = Tramite.objects.get(pk=pk)
+    except Tramite.DoesNotExist:
+        return Response({'error': 'Trámite no encontrado'}, status=404)
+
+    # Actualizamos el trámite con los datos que vienen del Admin
+    serializer = TramiteSerializer(tramite, data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        serializer.save()
+        
+        # Lógica extra: Si el admin rechaza algo, el trámite general pasa a 'RECHAZADO'
+        # Si aprueba todo, podrías verificar si ya no quedan pendientes
+        return Response(serializer.data)
+    return Response(serializer.errors, status=400)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def generar_permiso(request, pk):
+    # Aquí irá la lógica de ReportLab o xhtml2pdf más adelante
+    return Response({'message': 'Lógica de PDF en construcción'})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mis_tramites(request):
+    # Filtramos por el usuario que tiene la sesión iniciada
+    tramites = Tramite.objects.filter(usuario=request.user).order_by('-creado_el')
+    serializer = TramiteSerializer(tramites, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def corregir_documento(request, tramite_id):
+    try:
+        # Filtramos por ID y Usuario para que nadie edite trámites ajenos
+        tramite = Tramite.objects.get(id=tramite_id, usuario=request.user)
+        
+        # Si no vienen archivos en la petición
+        if not request.FILES:
+            return Response({"error": "No se subieron archivos para corregir"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Iteramos sobre cada archivo enviado desde el frontend
+        for campo_archivo in request.FILES:
+            nuevo_archivo = request.FILES[campo_archivo]
+            
+            # 1. Preparar ruta en Supabase
+            file_ext = nuevo_archivo.name.split('.')[-1]
+            file_path = f"correcciones/{tramite.folio}_{campo_archivo}.{file_ext}"
+            
+            # 2. Leer contenido y subir/sobrescribir (upsert)
+            file_content = nuevo_archivo.read()
+            
+            supabase.storage.from_('requisitos-de-panteon').upload(
+                path=file_path,
+                file=file_content,
+                file_options={
+                    "upsert": "true", 
+                    "content-type": nuevo_archivo.content_type
+                }
+            )
+
+            # 3. Obtener URL y actualizar campos dinámicamente
+            # Usamos el nombre del campo que viene en el request.FILES (ej: 'recibo_ss')
+            url_publica = supabase.storage.from_('requisitos-de-panteon').get_public_url(file_path)
+            
+            # Actualizamos el link del archivo, el status y limpiamos la observación
+            setattr(tramite, campo_archivo, url_publica)
+            setattr(tramite, f"status_{campo_archivo}", "PENDIENTE")
+            setattr(tramite, f"obs_{campo_archivo}", "")
+
+        # 4. Actualizar estado general del trámite y guardar
+        tramite.status = "PENDIENTE"
+        tramite.save()
+
+        return Response({
+            "message": "Documentos actualizados y trámite enviado a revisión"
+        }, status=status.HTTP_200_OK)
+
+    except Tramite.DoesNotExist:
+        return Response({"error": "Trámite no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": f"Error en el servidor: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
