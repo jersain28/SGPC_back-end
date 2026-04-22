@@ -162,6 +162,21 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+# 1. Definir la ruta base
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 2. Inicializar environ
+env = environ.Env()
+
+# 3. LEER EL ARCHIVO .ENV (Solo una vez para todo)
+# Esto cargará tanto las DB_ como las SUPABASE_
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+# --- Ahora ya puedes usar env() para cualquier cosa ---
+
+# Tus nuevas constantes de Supabase
+SUPABASE_URL = env("SUPABASE_URL")
+SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY")
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

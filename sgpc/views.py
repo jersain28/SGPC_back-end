@@ -192,29 +192,29 @@ def mis_tramites(request):
     serializer = TramiteSerializer(tramites, many=True)
     return Response(serializer.data)
 
+# Agrega esta línea antes de la función corregir_documento
+supabase_client: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def corregir_documento(request, tramite_id):
     try:
-        # Filtramos por ID y Usuario para que nadie edite trámites ajenos
+        # Buscamos el trámite
         tramite = Tramite.objects.get(id=tramite_id, usuario=request.user)
         
-        # Si no vienen archivos en la petición
         if not request.FILES:
-            return Response({"error": "No se subieron archivos para corregir"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No se enviaron archivos"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Iteramos sobre cada archivo enviado desde el frontend
         for campo_archivo in request.FILES:
             nuevo_archivo = request.FILES[campo_archivo]
             
-            # 1. Preparar ruta en Supabase
+            # Extraer extensión y preparar ruta
             file_ext = nuevo_archivo.name.split('.')[-1]
             file_path = f"correcciones/{tramite.folio}_{campo_archivo}.{file_ext}"
             
-            # 2. Leer contenido y subir/sobrescribir (upsert)
+            # --- CORRECCIÓN AQUÍ: Usamos supabase_client, no supabase ---
             file_content = nuevo_archivo.read()
-            
-            supabase.storage.from_('requisitos-de-panteon').upload(
+            supabase_client.storage.from_('requisitos-panteon').upload(
                 path=file_path,
                 file=file_content,
                 file_options={
@@ -223,24 +223,23 @@ def corregir_documento(request, tramite_id):
                 }
             )
 
-            # 3. Obtener URL y actualizar campos dinámicamente
-            # Usamos el nombre del campo que viene en el request.FILES (ej: 'recibo_ss')
-            url_publica = supabase.storage.from_('requisitos-de-panteon').get_public_url(file_path)
+            # Obtener URL pública usando la instancia correcta
+            url_publica = supabase_client.storage.from_('requisitos-panteon').get_public_url(file_path)
             
-            # Actualizamos el link del archivo, el status y limpiamos la observación
+            # Actualización dinámica de los campos del modelo
             setattr(tramite, campo_archivo, url_publica)
             setattr(tramite, f"status_{campo_archivo}", "PENDIENTE")
-            setattr(tramite, f"obs_{campo_archivo}", "")
+            setattr(tramite, f"obs_{campo_archivo}", "") 
 
-        # 4. Actualizar estado general del trámite y guardar
+        # Cambiamos el estado general y guardamos
         tramite.status = "PENDIENTE"
         tramite.save()
 
-        return Response({
-            "message": "Documentos actualizados y trámite enviado a revisión"
-        }, status=status.HTTP_200_OK)
+        return Response({"message": "Documentos actualizados correctamente"}, status=status.HTTP_200_OK)
 
     except Tramite.DoesNotExist:
         return Response({"error": "Trámite no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
+        # Esto te ayudará a ver el error real en la consola si algo más falla
+        print(f"Error detallado: {str(e)}")
         return Response({"error": f"Error en el servidor: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
