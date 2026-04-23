@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        /* Configuración de página */
+        @page {
+            size: letter;
+            margin: 1.5cm 2cm;
+        }
+
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #222;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Encabezado elegante */
+        .header {
+            text-align: center;
+            border-bottom: 3px double #800000;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            margin: 0;
+            color: #800000;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-size: 11px;
+            margin: 3px 0;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #555;
+        }
+
+        /* Caja de Folio */
+        .folio-section {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .folio-box {
+            display: inline-block;
+            border: 1px solid #800000;
+            padding: 5px 15px;
+            font-weight: bold;
+            color: #800000;
+            background-color: #f9f9f9;
+        }
+
+        /* Título del documento */
+        .titulo-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .titulo-documento {
+            font-size: 18px;
+            font-weight: bold;
+            text-decoration: none;
+            border-bottom: 1px solid #333;
+            display: inline-block;
+            padding-bottom: 2px;
+        }
+
+        /* Cuerpo del contenido */
+        .contenido {
+            font-size: 13pt;
+            text-align: justify;
+        }
+
+        .seccion-nombre {
+            background-color: #f2f2f2;
+            padding: 10px;
+            margin: 15px 0;
+            text-align: center;
+            border-radius: 4px;
+        }
+
+        .nombre-texto {
+            font-size: 16pt;
+            font-weight: bold;
+            display: block;
+            color: #000;
+        }
+
+        .etiqueta {
+            font-size: 10pt;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* Tabla de detalles */
+        .detalles-tabla {
+            width: 100%;
+            margin-top: 25px;
+            border-collapse: collapse;
+        }
+
+        .detalles-tabla td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 11pt;
+        }
+
+        /* Firmas */
+        .footer-firmas {
+            margin-top: 60px;
+            width: 100%;
+        }
+
+        .firma-col {
+            text-align: center;
+            width: 45%;
+            vertical-align: bottom;
+        }
+
+        .linea-firma {
+            border-top: 1px solid #333;
+            margin: 0 20px;
+            padding-top: 8px;
+            font-size: 10pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* Sello y validación */
+        .footer-info {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 9pt;
+            color: #888;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>H. AYUNTAMIENTO DE LA COMUNIDAD</h1>
+        <p>Dirección de Servicios Públicos Municipales</p>
+        <p>Coordinación de Panteones y Cementerios</p>
+    </div>
+
+    <div class="folio-section">
+        <div class="folio-box">
+            FOLIO: {{ tramite.folio }}
+        </div>
+    </div>
+
+    <div class="titulo-container">
+        <div class="titulo-documento">PERMISO OFICIAL DE INHUMACIÓN</div>
+    </div>
+
+    <div class="contenido">
+        <p>Por medio de la presente, y de conformidad con el reglamento vigente de panteones, se otorga la <strong>AUTORIZACIÓN FORMAL</strong> para el uso de lote y depósito de restos a favor del ciudadano(a):</p>
+
+        <div class="seccion-nombre">
+            <span class="etiqueta">Beneficiario / Declarante</span>
+            <span class="nombre-texto">{{ nombre_declarante|upper }}</span>
+        </div>
+
+        <p style="text-align: center; margin: 20px 0 10px 0;">Para los restos de quien en vida llevara el nombre de:</p>
+
+        <div class="seccion-nombre">
+            <span class="etiqueta">Finado(a)</span>
+            <span class="nombre-texto">{{ nombre_finado|upper }}</span>
+        </div>
+
+        <table class="detalles-tabla">
+            <tr>
+                <td width="40%"><strong>Fecha de Emisión:</strong></td>
+                <td>{{ fecha_hoy }}</td>
+            </tr>
+            <tr>
+                <td><strong>Tipo de Título:</strong></td>
+                <td>Derecho de Uso Perpetuo</td>
+            </tr>
+            <tr>
+                <td><strong>Estatus de Registro:</strong></td>
+                <td>Validado y Liberado por Administración</td>
+            </tr>
+        </table>
+
+        <p style="font-size: 10pt; margin-top: 20px; color: #444;">
+            <em>Nota: Este documento es oficial e intransferible. Debe presentarse ante el encargado del panteón al momento de realizar cualquier maniobra en el lote asignado.</em>
+        </p>
+    </div>
+
+    <table class="footer-firmas">
+        <tr>
+            <td class="firma-col">
+                <div style="height: 60px;"></div> <div class="linea-firma">Presidente de la Comunidad</div>
+                <div style="font-size: 8pt;">Firma y Sello</div>
+            </td>
+            <td width="10%"></td>
+            <td class="firma-col">
+                <div style="height: 60px;"></div> <div class="linea-firma">Secretaría del Ayuntamiento</div>
+                <div style="font-size: 8pt;">Validación Administrativa</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="footer-info">
+        Documento generado digitalmente por el Sistema de Gestión de Panteón Comunitario (SGPC)
+        <br>Código de Verificación: {{ tramite.id|truncatechars:8 }}-{{ tramite.folio }} | Versión 2.0
+    </div>
+
+</body>
+</html>

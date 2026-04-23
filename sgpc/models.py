@@ -29,6 +29,7 @@ class Tramite(models.Model):
     parentesco = models.CharField(max_length=100)
     email_declarante = models.EmailField(max_length=255, blank=True, null=True)
     telefono_declarante = models.CharField(max_length=20, blank=True, null=True)
+
     
     # --- DOCUMENTOS Y VALIDACIÓN INDIVIDUAL ---
     
@@ -84,7 +85,7 @@ class Tramite(models.Model):
 
     
     # 3. Campos de control y resultados
-    permiso_final = models.URLField(max_length=500, blank=True, null=True)
+    pdf_permiso = models.URLField(max_length=500, blank=True, null=True)
     status = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
     creado_el = models.DateTimeField(auto_now_add=True)
     actualizado_el = models.DateTimeField(auto_now=True)

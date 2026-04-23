@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 import environ
-import os
+from supabase import create_client
 
 load_dotenv()
 
@@ -67,7 +67,7 @@ ROOT_URLCONF = 'configuracion.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -177,6 +177,12 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # Tus nuevas constantes de Supabase
 SUPABASE_URL = env("SUPABASE_URL")
 SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY")
+
+
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

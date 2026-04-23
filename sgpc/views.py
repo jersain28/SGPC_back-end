@@ -1,5 +1,10 @@
+from datetime import date
+import io
+from multiprocessing import context
+import os
+
 from rest_framework import viewsets, permissions
-import supabase
+from supabase_auth import datetime
 from .models import Tramite
 from .serializers import TramiteSerializer
 from django.contrib.auth.models import User
@@ -17,6 +22,9 @@ from django.utils.timezone import localtime
 from django.http import JsonResponse    
 from supabase import create_client, Client
 from django.conf import settings
+from .utils import render_to_pdf
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 
 class TramiteViewSet(viewsets.ModelViewSet):
@@ -243,3 +251,49 @@ def corregir_documento(request, tramite_id):
         # Esto te ayudará a ver el error real en la consola si algo más falla
         print(f"Error detallado: {str(e)}")
         return Response({"error": f"Error en el servidor: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['POST'])
+def finalizar_y_generar_pdf(request, id):
+    try:
+        tramite = Tramite.objects.get(id=id)
+        
+        # Variables para el PDF (Ya vimos que sí tienen datos)
+        context = {
+            'tramite': tramite,
+            'nombre_declarante': tramite.nombre_declarante,
+            'nombre_finado': tramite.nombre_finado,
+            'fecha_hoy': date.today().strftime('%d/%m/%Y'),
+        }
+
+        # USAMOS TU FUNCIÓN DE UTILS
+        pdf_binario = render_to_pdf('permiso_final.html', context)
+        
+        if not pdf_binario:
+            return Response({"error": "Error al generar el binario del PDF"}, status=500)
+
+        # Configuración de Supabase
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        client = create_client(url, key)
+
+        nombre_archivo = f"PERMISO_{tramite.folio}.pdf"
+        
+        # Subida
+        client.storage.from_('permisos-liberados').upload(
+            path=nombre_archivo,
+            file=pdf_binario,
+            file_options={"upsert": "true", "content-type": "application/pdf"}
+        )
+        
+        res_url = client.storage.from_('permisos-liberados').get_public_url(nombre_archivo)
+        
+        tramite.pdf_permiso = res_url
+        tramite.status = 'FINALIZADO'
+        tramite.save()
+        
+        return Response({"url": res_url}, status=200)
+
+    except Exception as e:
+        print(f"--- ERROR REAL ---: {str(e)}") # Aquí es donde salía lo de pisa
+        return Response({"error": str(e)}, status=500)
