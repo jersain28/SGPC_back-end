@@ -169,7 +169,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 # Tus nuevas constantes de Supabase
-SUPABASE_URL = env("SUPABASE_URL")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://placeholder.supabase.co")
 SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY")
 
 
