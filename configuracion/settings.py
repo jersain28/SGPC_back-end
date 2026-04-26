@@ -87,11 +87,22 @@ WSGI_APPLICATION = 'configuracion.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-DATABASES = {
-    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
-}
-DATABASES['default']['CONN_MAX_AGE'] = 600
-DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Usamos parse pero con un manejo de errores manual si es necesario
+    try:
+        DATABASES = {
+            'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        }
+        # Forzamos SSL para Supabase
+        DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
+    except Exception:
+        # Si falla el parse, es que la URL está mal formada (caracteres especiales)
+        # Aquí podrías configurar los campos uno por uno si conoces los valores
+        print("Error parseando DATABASE_URL. Revisa caracteres especiales.")
+        raise
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
