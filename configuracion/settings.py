@@ -12,11 +12,12 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from datetime import timedelta
 import os
-import dj_database_url
+
 from pathlib import Path
 from dotenv import load_dotenv
 import environ
 from supabase import create_client
+import dj_database_url
 
 load_dotenv()
 
