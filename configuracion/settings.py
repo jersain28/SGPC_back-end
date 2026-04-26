@@ -173,7 +173,9 @@ env = environ.Env()
 # Esto cargará tanto las DB_ como las SUPABASE_
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-# --- Ahora ya puedes usar env() para cualquier cosa ---
+DATABASES = {
+    'default': env.db('DATABASE_URL', default=f"postgres://{env('DB_USER')}:{env('DB_PASSWORD')}@{env('DB_HOST')}:{env('DB_PORT')}/{env('DB_NAME')}")
+}
 
 # Tus nuevas constantes de Supabase
 SUPABASE_URL = env("SUPABASE_URL")
