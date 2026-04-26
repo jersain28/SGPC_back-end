@@ -198,3 +198,7 @@ supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # Donde Django reunirá todo
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://sgpcback-end-production.up.railway.app',
+]
