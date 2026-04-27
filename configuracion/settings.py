@@ -138,7 +138,7 @@ USE_TZ = True
 APPEND_SLASH = True
 
 CORS_ALLOWED_ORIGINS = [
-    "https://panteoncomunidad.netlify.app"
+    "https://panteoncomunidad.netlify.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
