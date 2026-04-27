@@ -210,5 +210,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # Donde Django reunirá todo
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://panteoncomunidad.netlify.app',
     'https://sgpcback-end-production.up.railway.app',
 ]
